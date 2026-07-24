@@ -367,7 +367,7 @@ async function downloadPdf() {
 async function downloadPdfForData(data) {
   try {
     setStatus('Generando PDF…');
-    const blob = buildPdfBlob(data, settings);
+    const blob = await buildPdfBlob(data, settings);
     downloadBlob(blob, pdfFilename(data));
     setStatus('PDF generado');
   } catch (error) {
@@ -382,7 +382,7 @@ async function sharePdf() {
   const data = readForm();
   try {
     setStatus('Preparando archivo…');
-    const blob = buildPdfBlob(data, settings);
+    const blob = await buildPdfBlob(data, settings);
     const filename = pdfFilename(data);
     const file = new File([blob], filename, { type: 'application/pdf' });
     if (navigator.share && navigator.canShare?.({ files: [file] })) {
@@ -535,42 +535,52 @@ const MM_TO_PT = 72 / 25.4;
 const A4_WIDTH_MM = 210;
 const A4_HEIGHT_MM = 297;
 let measureCanvas;
+let pdfLogoPromise;
 
-function buildPdfBlob(data, appSettings) {
+async function buildPdfBlob(data, appSettings) {
   const page = new PdfPage(A4_WIDTH_MM, A4_HEIGHT_MM);
   const red = '#d90416';
   const dark = '#101418';
   const line = '#d7dade';
   const soft = '#f7f7f8';
+  await waitForPdfAssets();
+  const logo = await loadPdfLogo();
 
   // Encabezado.
   page.rect(0, 0, 210, 34, { fill: dark });
   page.roundRect(149, -16, 76, 54, 26, { fill: red });
-  page.roundRect(7, 5, 26, 26, 5, { fill: red });
-  page.text(20, 15.4, 'copo', 15, { font: 'bold', color: '#ffffff', align: 'center' });
-  page.text(20, 22.7, 'tech', 15, { font: 'bold', color: '#ffffff', align: 'center' });
-  page.text(39, 17, 'CopoTech Salta', 19, { font: 'bold', color: '#ffffff' });
-  page.text(39, 25, 'Servicio técnico especializado en celulares y PC', 7.2, { color: '#e3e7ea' });
-  page.text(145, 11, `WhatsApp: ${appSettings.phone}`, 7, { color: '#ffffff' });
-  page.text(145, 18.8, `Instagram: ${appSettings.instagram}`, 7, { color: '#ffffff' });
-  page.text(145, 26.6, appSettings.address, 6.7, { color: '#ffffff' });
+  // Logo oficial extraído de la plantilla visual. Ocupa casi toda la altura
+  // del encabezado y conserva sus proporciones y bordes redondeados.
+  page.image(logo, 3.8, 0.25, 33.5, 33.5);
+  page.text(42.2, 17.2, 'CopoTech Salta', 20.2, { font: 'bold', color: '#ffffff' });
+  page.text(42.2, 25.3, 'Servicio técnico especializado en celulares y PC', 8.0, { font: 'bold', color: '#ffffff' });
 
-  // Título y metadatos.
-  page.text(10, 52, 'PRESUPUESTO', 28, { font: 'bold', color: '#111111' });
-  drawMeta(page, 149, 46, 'Fecha:', formatDate(data.date));
-  drawMeta(page, 149, 53.5, 'Validez:', `${data.validity} días`);
-  drawMeta(page, 139, 61, 'Entrega estimada:', data.delivery);
+  // Contactos: mismo margen derecho, blanco puro y peso bold.
+  const contactRightX = 199.2;
+  page.text(contactRightX, 10.7, `WhatsApp: ${appSettings.phone}`, 8.8, { font: 'bold', color: '#ffffff', align: 'right' });
+  page.text(contactRightX, 18.7, `Instagram: ${appSettings.instagram}`, 8.8, { font: 'bold', color: '#ffffff', align: 'right' });
+  page.text(contactRightX, 26.7, appSettings.address, 8.5, { font: 'bold', color: '#ffffff', align: 'right' });
+
+  // Título y metadatos en dos columnas fijas.
+  page.text(10, 52, 'PRESUPUESTO', 29.5, { font: 'bold', color: '#111111' });
+  const metaLabelX = 126;
+  const metaValueX = 166;
+  const metaStartY = 46;
+  const metaRowGap = 7.5;
+  drawMeta(page, metaLabelX, metaValueX, metaStartY, 'Fecha:', formatDate(data.date));
+  drawMeta(page, metaLabelX, metaValueX, metaStartY + metaRowGap, 'Validez:', `${data.validity} días`);
+  drawMeta(page, metaLabelX, metaValueX, metaStartY + metaRowGap * 2, 'Entrega estimada:', data.delivery);
 
   // Tarjetas.
   page.roundRect(10, 66, 92, 38, 3, { stroke: line, lineWidth: .35 });
   page.roundRect(108, 66, 92, 38, 3, { stroke: line, lineWidth: .35 });
-  page.text(14, 74, 'CLIENTE', 9, { font: 'bold', color: red });
+  page.text(14, 74, 'CLIENTE', 9.7, { font: 'bold', color: red });
   drawField(page, 14, 81.5, 'Nombre:', data.client, 82);
   drawField(page, 14, 88.2, 'Modelo:', data.model, 82);
   drawField(page, 14, 94.9, 'Color final:', data.color || '—', 82);
   drawField(page, 14, 101.6, 'IMEI / Serie:', data.serial || '—', 82);
 
-  page.text(112, 74, 'DATOS TÉCNICOS', 9, { font: 'bold', color: red });
+  page.text(112, 74, 'DATOS TÉCNICOS', 9.7, { font: 'bold', color: red });
   drawField(page, 112, 82.5, 'Responsable:', appSettings.responsible, 83);
   drawField(page, 112, 91.2, 'Forma de pago:', appSettings.payment, 83);
 
@@ -593,10 +603,10 @@ function buildPdfBlob(data, appSettings) {
   page.rect(tableX, tableY, tableW, headerH, { fill: red });
   page.line(tableX + col1, tableY, tableX + col1, tableY + totalH, { color: line, lineWidth: .3 });
   page.line(tableX + col1 + col2, tableY, tableX + col1 + col2, tableY + totalH, { color: line, lineWidth: .3 });
-  page.text(tableX + col1 / 2, tableY + 7.2, 'OPCIÓN', 7.2, { font: 'bold', color: '#ffffff', align: 'center' });
-  page.text(tableX + col1 + 6, tableY + 7.2, 'DESCRIPCIÓN', 7.2, { font: 'bold', color: '#ffffff' });
-  page.text(tableX + col1 + col2 + col3 / 2, tableY + 5.2, 'PRECIO', 6.7, { font: 'bold', color: '#ffffff', align: 'center' });
-  page.text(tableX + col1 + col2 + col3 / 2, tableY + 8.5, 'FINAL', 6.7, { font: 'bold', color: '#ffffff', align: 'center' });
+  page.text(tableX + col1 / 2, tableY + 7.2, 'OPCIÓN', 7.9, { font: 'bold', color: '#ffffff', align: 'center' });
+  page.text(tableX + col1 + 6, tableY + 7.2, 'DESCRIPCIÓN', 7.9, { font: 'bold', color: '#ffffff' });
+  page.text(tableX + col1 + col2 + col3 / 2, tableY + 5.2, 'PRECIO', 7.3, { font: 'bold', color: '#ffffff', align: 'center' });
+  page.text(tableX + col1 + col2 + col3 / 2, tableY + 8.5, 'FINAL', 7.3, { font: 'bold', color: '#ffffff', align: 'center' });
 
   drawOptionRow(page, {
     y: tableY + headerH,
@@ -627,63 +637,64 @@ function buildPdfBlob(data, appSettings) {
   }
 
   // Garantía, seña y firma.
-  page.text(10, 235, 'GARANTÍA Y CONDICIONES', 8.5, { font: 'bold', color: red });
-  page.paragraph(appSettings.guarantee, 10, 240, 125, 3.4, 5.7, { maxLines: 7, color: '#151515' });
+  page.text(10, 235, 'GARANTÍA Y CONDICIONES', 9.2, { font: 'bold', color: red });
+  page.paragraph(appSettings.guarantee, 10, 240, 125, 3.5, 6.2, { maxLines: 7, color: '#151515' });
   page.roundRect(10, 263, 122, 14, 2, { fill: '#fff1f3', stroke: '#f1c5cb', lineWidth: .3 });
   page.circle(17, 270, 4.3, { fill: red });
-  page.text(17, 271.7, '%', 9, { font: 'bold', color: '#ffffff', align: 'center' });
-  page.text(24, 268.3, `Para solicitar el repuesto se requiere una seña del ${appSettings.deposit}% del valor de la reparación.`, 5.5, { font: 'bold', color: '#111111' });
-  page.text(24, 273.2, 'El trabajo comenzará una vez acreditada dicha seña.', 5.5, { color: '#111111' });
+  // Centro óptico del glifo: se eleva levemente la línea base para que el
+  // porcentaje no quede apoyado en la mitad inferior del círculo.
+  page.text(17.04, 271.15, '%', 9.4, { font: 'bold', color: '#ffffff', align: 'center' });
+  page.text(24, 268.3, `Para solicitar el repuesto se requiere una seña del ${appSettings.deposit}% del valor de la reparación.`, 6.0, { font: 'bold', color: '#111111' });
+  page.text(24, 273.2, 'El trabajo comenzará una vez acreditada dicha seña.', 6.0, { color: '#111111' });
 
   page.line(140, 265, 198, 265, { color: '#222222', lineWidth: .35 });
-  page.text(169, 271, appSettings.responsible, 7.5, { font: 'bold', align: 'center' });
-  page.text(169, 276, 'Responsable técnico', 6.5, { align: 'center' });
+  page.text(169, 271, appSettings.responsible, 8.2, { font: 'bold', align: 'center' });
+  page.text(169, 276, 'Responsable técnico', 7.0, { align: 'center' });
   page.text(169, 281, 'Documento generado por CopoTech Salta', 5.2, { color: '#8b9196', align: 'center' });
 
-  // Pie.
+  // Pie. Sin pseudo-elementos ni decoraciones rojas superpuestas.
   page.rect(4, 285, 202, 12, { fill: dark });
-  page.roundRect(-10, 278, 84, 12, 8, { fill: red });
-  page.text(13, 291, 'CopoTech Salta', 6.8, { font: 'bold', color: '#ffffff' });
-  page.text(13, 294.2, 'Servicio técnico especializado · Reparaciones con garantía · Repuestos de calidad', 4.8, { color: '#ffffff' });
-  page.text(156, 290.7, 'Facebook: CopoTech Salta', 5.1, { color: '#ffffff' });
-  page.text(156, 294.3, `WhatsApp: ${appSettings.phone}`, 5.1, { color: '#ffffff' });
+  page.text(13, 291, 'CopoTech Salta', 7.4, { font: 'bold', color: '#ffffff' });
+  page.text(13, 294.2, 'Servicio técnico especializado · Reparaciones con garantía · Repuestos de calidad', 5.1, { color: '#ffffff' });
+  page.text(198, 290.7, 'Facebook: CopoTech Salta', 5.7, { color: '#ffffff', align: 'right' });
+  page.text(198, 294.3, `WhatsApp: ${appSettings.phone}`, 5.7, { color: '#ffffff', align: 'right' });
 
   return page.toBlob();
 }
 
-function drawMeta(page, x, y, label, value) {
-  page.text(x, y, label, 7.5, { font: 'bold', color: '#d90416', align: 'right' });
-  page.text(x + 4, y, ellipsize(value, 34), 7.3, { font: 'bold', color: '#111111' });
+function drawMeta(page, labelX, valueX, y, label, value) {
+  page.text(labelX, y, label, 8.2, { font: 'bold', color: '#d90416' });
+  page.text(valueX, y, ellipsize(value, 34), 8.0, { font: 'bold', color: '#111111' });
 }
 
 function drawField(page, x, y, label, value, maxWidth) {
-  page.text(x, y, label, 7, { font: 'bold', color: '#222222' });
-  const labelW = measureTextMm(label, 7, true) + 2;
-  page.text(x + labelW, y, ellipsizeToWidth(value, maxWidth - labelW, 7, false), 7, { color: '#111111' });
+  page.text(x, y, label, 7.8, { font: 'bold', color: '#222222' });
+  const labelW = measureTextMm(label, 7.8, true) + 2;
+  page.text(x + labelW, y, ellipsizeToWidth(value, maxWidth - labelW, 7.8, false), 7.8, { color: '#111111' });
 }
 
 function drawTextSection(page, x, y, title, text, red, soft, height) {
-  page.text(x, y, title, 8.5, { font: 'bold', color: red });
+  page.text(x, y, title, 9.3, { font: 'bold', color: red });
   page.rect(x, y + 4, 190, height, { fill: soft });
   page.rect(x, y + 4, 1.2, height, { fill: red });
-  page.paragraph(text, x + 8, y + 11, 178, 4.7, 7, { maxLines: 3, color: '#151515' });
+  page.paragraph(text, x + 8, y + 11, 178, 4.9, 7.7, { maxLines: 3, color: '#151515' });
 }
 
 function drawOptionRow(page, args) {
   const { y, h, x, col1, col2, col3, name, description, price } = args;
-  const nameFit = fitLines(name, col1 - 8, 8, true, 2);
+  const nameFit = fitLines(name, col1 - 8, 8.7, true, 2);
   const nameStart = y + h / 2 - ((nameFit.lines.length - 1) * 4.2) / 2 + 1.4;
   nameFit.lines.forEach((lineText, index) => {
     page.text(x + col1 / 2, nameStart + index * 4.2, lineText, nameFit.fontSize, { font: 'bold', align: 'center' });
   });
 
-  const descFit = fitLines(description, col2 - 10, 6.8, false, 3);
+  const descFit = fitLines(description, col2 - 10, 7.5, false, 3);
   const descStart = y + h / 2 - ((descFit.lines.length - 1) * 4.1) / 2 + 1.3;
   descFit.lines.forEach((lineText, index) => {
     page.text(x + col1 + 5, descStart + index * 4.1, lineText, descFit.fontSize, { color: '#111111' });
   });
 
-  const priceSize = price.length > 10 ? 10 : 11.5;
+  const priceSize = price.length > 10 ? 10.8 : 12.3;
   page.text(x + col1 + col2 + col3 / 2, y + h / 2 + 2.1, price, priceSize, { font: 'bold', align: 'center' });
 }
 
@@ -694,6 +705,13 @@ class PdfPage {
     this.widthPt = widthMm * MM_TO_PT;
     this.heightPt = heightMm * MM_TO_PT;
     this.ops = [];
+    this.images = [];
+  }
+
+  image(imageData, x, y, w, h) {
+    const name = `Im${this.images.length + 1}`;
+    this.images.push({ name, imageData });
+    this.ops.push(`q ${num(w * MM_TO_PT)} 0 0 ${num(h * MM_TO_PT)} ${num(x * MM_TO_PT)} ${num(this.heightPt - (y + h) * MM_TO_PT)} cm /${name} Do Q`);
   }
 
   rect(x, y, w, h, options = {}) {
@@ -776,29 +794,133 @@ class PdfPage {
 
   toBlob() {
     const content = this.ops.join('\n') + '\n';
+    const contentBytes = latin1Bytes(content);
     const objects = [];
-    objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
-    objects[2] = '<< /Type /Pages /Kids [3 0 R] /Count 1 >>';
-    objects[3] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${num(this.widthPt)} ${num(this.heightPt)}] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>`;
-    objects[4] = `<< /Length ${binaryLength(content)} >>\nstream\n${content}endstream`;
-    objects[5] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
-    objects[6] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+    const imageObjectStart = 7;
+    const xObjects = this.images.length
+      ? `/XObject << ${this.images.map((image, index) => `/${image.name} ${imageObjectStart + index} 0 R`).join(' ')} >> `
+      : '';
 
-    let pdf = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n';
+    objects[1] = latin1Bytes('<< /Type /Catalog /Pages 2 0 R >>');
+    objects[2] = latin1Bytes('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+    objects[3] = latin1Bytes(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${num(this.widthPt)} ${num(this.heightPt)}] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> ${xObjects}>> /Contents 4 0 R >>`);
+    objects[4] = concatBytes(
+      latin1Bytes(`<< /Length ${contentBytes.length} >>\nstream\n`),
+      contentBytes,
+      latin1Bytes('endstream')
+    );
+    objects[5] = latin1Bytes('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+    objects[6] = latin1Bytes('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+
+    this.images.forEach(({ imageData }, index) => {
+      const imageBytes = imageData.data;
+      objects[imageObjectStart + index] = concatBytes(
+        latin1Bytes(`<< /Type /XObject /Subtype /Image /Width ${imageData.width} /Height ${imageData.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /DecodeParms << /Predictor 15 /Colors 3 /BitsPerComponent 8 /Columns ${imageData.width} >> /Length ${imageBytes.length} >>\nstream\n`),
+        imageBytes,
+        latin1Bytes('\nendstream')
+      );
+    });
+
+    const header = latin1Bytes('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+    const wrappedObjects = [];
     const offsets = [0];
+    let offset = header.length;
     for (let i = 1; i < objects.length; i += 1) {
-      offsets[i] = binaryLength(pdf);
-      pdf += `${i} 0 obj\n${objects[i]}\nendobj\n`;
+      const wrapped = concatBytes(latin1Bytes(`${i} 0 obj\n`), objects[i], latin1Bytes('\nendobj\n'));
+      offsets[i] = offset;
+      wrappedObjects.push(wrapped);
+      offset += wrapped.length;
     }
-    const xrefOffset = binaryLength(pdf);
-    pdf += `xref\n0 ${objects.length}\n`;
-    pdf += '0000000000 65535 f \n';
+
+    const xrefOffset = offset;
+    let xref = `xref\n0 ${objects.length}\n0000000000 65535 f \n`;
     for (let i = 1; i < objects.length; i += 1) {
-      pdf += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
+      xref += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
     }
-    pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
-    return new Blob([binaryStringToBytes(pdf)], { type: 'application/pdf' });
+    xref += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+    return new Blob([header, ...wrappedObjects, latin1Bytes(xref)], { type: 'application/pdf' });
   }
+}
+
+
+async function waitForPdfAssets() {
+  if (document.fonts?.ready) await document.fonts.ready;
+  const logo = document.querySelector('#budgetDocument .doc-logo img');
+  if (logo?.decode) {
+    try { await logo.decode(); } catch { /* La carga por fetch se valida al crear el PDF. */ }
+  }
+}
+
+function loadPdfLogo() {
+  if (!pdfLogoPromise) {
+    const logoElement = document.querySelector('#budgetDocument .doc-logo img');
+    const source = logoElement?.currentSrc || logoElement?.src || new URL('icons/logo-copotech.png', document.baseURI).href;
+    pdfLogoPromise = fetch(source)
+      .then((response) => {
+        if (!response.ok) throw new Error(`No se pudo cargar el logo (${response.status})`);
+        return response.arrayBuffer();
+      })
+      .then((buffer) => parseRgbPng(new Uint8Array(buffer)));
+  }
+  return pdfLogoPromise;
+}
+
+function parseRgbPng(bytes) {
+  const signature = [137, 80, 78, 71, 13, 10, 26, 10];
+  if (bytes.length < 33 || !signature.every((value, index) => bytes[index] === value)) {
+    throw new Error('El logo no es un PNG válido.');
+  }
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  let bitDepth = 0;
+  let colorType = 0;
+  let interlace = 0;
+  const idat = [];
+  while (offset + 12 <= bytes.length) {
+    const length = readUint32(bytes, offset);
+    const type = String.fromCharCode(...bytes.slice(offset + 4, offset + 8));
+    const dataStart = offset + 8;
+    const dataEnd = dataStart + length;
+    if (dataEnd + 4 > bytes.length) throw new Error('PNG truncado.');
+    if (type === 'IHDR') {
+      width = readUint32(bytes, dataStart);
+      height = readUint32(bytes, dataStart + 4);
+      bitDepth = bytes[dataStart + 8];
+      colorType = bytes[dataStart + 9];
+      interlace = bytes[dataStart + 12];
+    } else if (type === 'IDAT') {
+      idat.push(bytes.slice(dataStart, dataEnd));
+    } else if (type === 'IEND') {
+      break;
+    }
+    offset = dataEnd + 4;
+  }
+  if (!width || !height || bitDepth !== 8 || colorType !== 2 || interlace !== 0 || !idat.length) {
+    throw new Error('El logo PNG debe ser RGB de 8 bits y no entrelazado.');
+  }
+  return { width, height, data: concatBytes(...idat) };
+}
+
+function readUint32(bytes, offset) {
+  return ((bytes[offset] * 0x1000000) + (bytes[offset + 1] << 16) + (bytes[offset + 2] << 8) + bytes[offset + 3]) >>> 0;
+}
+
+function latin1Bytes(value) {
+  const bytes = new Uint8Array(value.length);
+  for (let i = 0; i < value.length; i += 1) bytes[i] = value.charCodeAt(i) & 0xff;
+  return bytes;
+}
+
+function concatBytes(...parts) {
+  const length = parts.reduce((total, part) => total + part.length, 0);
+  const result = new Uint8Array(length);
+  let offset = 0;
+  parts.forEach((part) => {
+    result.set(part, offset);
+    offset += part.length;
+  });
+  return result;
 }
 
 function paintOperator(options) {
