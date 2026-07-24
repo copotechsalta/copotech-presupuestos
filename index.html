@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#d90416">
+  <meta name="description" content="Presupuestos de reparación de CopoTech Salta">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CopoTech">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <title>CopoTech Presupuestos</title>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-brand">
+      <div class="app-logo" aria-hidden="true"><span>copo</span><span>tech</span></div>
+      <div>
+        <h1>CopoTech Presupuestos</h1>
+        <p>Presupuestos de reparación</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="installBtn" class="button button-secondary" type="button" hidden>Instalar</button>
+      <button id="newBtn" class="button button-secondary" type="button">Nuevo</button>
+      <button id="saveBtn" class="button button-secondary" type="button">Guardar</button>
+      <button id="pdfBtn" class="button button-primary" type="button">Descargar PDF</button>
+      <button id="shareBtn" class="button button-primary" type="button">Compartir</button>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Secciones">
+    <button class="tab active" data-tab="editor" type="button">Presupuesto</button>
+    <button class="tab" data-tab="history" type="button">Historial</button>
+    <button class="tab" data-tab="settings" type="button">Ajustes</button>
+  </nav>
+
+  <main>
+    <section id="editorTab" class="tab-panel active">
+      <div class="workspace">
+        <form id="budgetForm" class="editor-panel" autocomplete="off">
+          <div class="form-section">
+            <h2>Datos generales</h2>
+            <div class="form-grid cols-3">
+              <label>Fecha
+                <input id="date" name="date" type="date" required>
+              </label>
+              <label>Validez (días)
+                <input id="validity" name="validity" type="number" min="1" max="90" inputmode="numeric" required>
+              </label>
+              <label>Entrega estimada
+                <input id="delivery" name="delivery" type="text" maxlength="40" placeholder="12 a 24 hs" required>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h2>Cliente y equipo</h2>
+            <div class="form-grid cols-2">
+              <label>Nombre del cliente
+                <input id="client" name="client" type="text" maxlength="45" required>
+              </label>
+              <label>Modelo / equipo
+                <input id="model" name="model" type="text" maxlength="55" required>
+              </label>
+              <label>Color final
+                <input id="color" name="color" type="text" maxlength="35" placeholder="Negro">
+              </label>
+              <label>IMEI / Serie (opcional)
+                <input id="serial" name="serial" type="text" maxlength="40">
+              </label>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h2>Diagnóstico y trabajo</h2>
+            <label>Diagnóstico
+              <textarea id="diagnosis" name="diagnosis" rows="4" maxlength="360" required></textarea>
+            </label>
+            <label>Trabajo a realizar
+              <textarea id="work" name="work" rows="4" maxlength="360" required></textarea>
+            </label>
+          </div>
+
+          <div class="form-section">
+            <h2>Opciones de reparación</h2>
+            <div class="option-editor">
+              <h3>Opción 1</h3>
+              <div class="form-grid cols-2">
+                <label>Nombre
+                  <input id="option1Name" type="text" maxlength="28" required>
+                </label>
+                <label>Precio final
+                  <input id="option1Price" type="text" inputmode="numeric" maxlength="18" placeholder="36.000" required>
+                </label>
+              </div>
+              <label>Descripción
+                <textarea id="option1Description" rows="3" maxlength="220" required></textarea>
+              </label>
+            </div>
+
+            <div class="option-editor">
+              <div class="option-heading">
+                <h3>Opción 2</h3>
+                <label class="switch-label"><input id="option2Enabled" type="checkbox" checked> Incluir</label>
+              </div>
+              <div id="option2Fields">
+                <div class="form-grid cols-2">
+                  <label>Nombre
+                    <input id="option2Name" type="text" maxlength="28">
+                  </label>
+                  <label>Precio final
+                    <input id="option2Price" type="text" inputmode="numeric" maxlength="18" placeholder="40.000">
+                  </label>
+                </div>
+                <label>Descripción
+                  <textarea id="option2Description" rows="3" maxlength="220"></textarea>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions mobile-actions">
+            <button class="button button-secondary" type="button" data-action="save">Guardar</button>
+            <button class="button button-primary" type="button" data-action="pdf">Descargar PDF</button>
+            <button class="button button-primary" type="button" data-action="share">Compartir</button>
+          </div>
+        </form>
+
+        <aside class="preview-panel">
+          <div class="preview-toolbar">
+            <strong>Vista previa A4</strong>
+            <span id="statusText">Listo</span>
+          </div>
+          <div id="previewViewport" class="preview-viewport">
+            <article id="budgetDocument" class="budget-document" aria-label="Vista previa del presupuesto">
+              <header class="doc-header">
+                <div class="doc-logo"><span>copo</span><span>tech</span></div>
+                <div class="doc-brand">
+                  <strong>CopoTech Salta</strong>
+                  <span>Servicio técnico especializado en celulares y PC</span>
+                </div>
+                <div class="doc-contact">
+                  <span>WhatsApp: <b data-bind="phone"></b></span>
+                  <span>Instagram: <b data-bind="instagram"></b></span>
+                  <span><b data-bind="address"></b></span>
+                </div>
+              </header>
+
+              <section class="doc-title-row">
+                <h2>PRESUPUESTO</h2>
+                <dl class="doc-meta">
+                  <div><dt>Fecha:</dt><dd data-bind="dateFormatted"></dd></div>
+                  <div><dt>Validez:</dt><dd><span data-bind="validity"></span> días</dd></div>
+                  <div><dt>Entrega estimada:</dt><dd data-bind="delivery"></dd></div>
+                </dl>
+              </section>
+
+              <section class="doc-cards">
+                <div class="doc-card">
+                  <h3>CLIENTE</h3>
+                  <p><b>Nombre:</b> <span data-bind="client"></span></p>
+                  <p><b>Modelo:</b> <span data-bind="model"></span></p>
+                  <p><b>Color final:</b> <span data-bind="color"></span></p>
+                  <p><b>IMEI / Serie:</b> <span data-bind="serial"></span></p>
+                </div>
+                <div class="doc-card">
+                  <h3>DATOS TÉCNICOS</h3>
+                  <p><b>Responsable:</b> <span data-bind="responsible"></span></p>
+                  <p><b>Forma de pago:</b> <span data-bind="payment"></span></p>
+                </div>
+              </section>
+
+              <section class="doc-block">
+                <h3>DIAGNÓSTICO</h3>
+                <div class="doc-text-box"><p data-bind="diagnosis"></p></div>
+              </section>
+
+              <section class="doc-block">
+                <h3>TRABAJO A REALIZAR</h3>
+                <div class="doc-text-box"><p data-bind="work"></p></div>
+              </section>
+
+              <section class="doc-options">
+                <div class="option-row option-header">
+                  <div>OPCIÓN</div><div>DESCRIPCIÓN</div><div>PRECIO<br>FINAL</div>
+                </div>
+                <div class="option-row">
+                  <div class="option-name" data-bind="option1Name"></div>
+                  <div data-bind="option1Description"></div>
+                  <div class="option-price" data-bind="option1PriceFormatted"></div>
+                </div>
+                <div class="option-row" id="previewOption2Row">
+                  <div class="option-name" data-bind="option2Name"></div>
+                  <div data-bind="option2Description"></div>
+                  <div class="option-price" data-bind="option2PriceFormatted"></div>
+                </div>
+              </section>
+
+              <section class="doc-lower">
+                <div class="doc-guarantee">
+                  <h3>GARANTÍA Y CONDICIONES</h3>
+                  <p data-bind="guarantee"></p>
+                  <div class="deposit-note">
+                    <div class="deposit-icon">%</div>
+                    <p>Para solicitar el repuesto se requiere una seña del <b><span data-bind="deposit"></span>%</b> del valor de la reparación.<br>El trabajo comenzará una vez acreditada dicha seña.</p>
+                  </div>
+                </div>
+                <div class="doc-signature">
+                  <div class="signature-line"></div>
+                  <strong data-bind="responsible"></strong>
+                  <span>Responsable técnico</span>
+                  <small>Documento generado por CopoTech Salta</small>
+                </div>
+              </section>
+
+              <footer class="doc-footer">
+                <div><strong>CopoTech Salta</strong><span>Servicio técnico especializado · Reparaciones con garantía · Repuestos de calidad</span></div>
+                <div><span>Facebook: CopoTech Salta</span><span>WhatsApp: <b data-bind="phone"></b></span></div>
+              </footer>
+            </article>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="historyTab" class="tab-panel history-panel">
+      <div class="section-heading">
+        <div><h2>Historial</h2><p>Los datos quedan guardados en este dispositivo.</p></div>
+        <div class="section-actions">
+          <button id="exportBtn" class="button button-secondary" type="button">Exportar respaldo</button>
+          <label class="button button-secondary file-button">Importar respaldo<input id="importInput" type="file" accept="application/json" hidden></label>
+          <button id="clearHistoryBtn" class="button button-danger" type="button">Vaciar historial</button>
+        </div>
+      </div>
+      <div id="historyList" class="history-list"></div>
+    </section>
+
+    <section id="settingsTab" class="tab-panel settings-panel">
+      <div class="settings-card">
+        <h2>Ajustes de CopoTech</h2>
+        <div class="form-grid cols-2">
+          <label>Responsable técnico
+            <input id="settingResponsible" type="text" maxlength="45">
+          </label>
+          <label>Forma de pago
+            <input id="settingPayment" type="text" maxlength="60">
+          </label>
+          <label>WhatsApp
+            <input id="settingPhone" type="text" maxlength="30">
+          </label>
+          <label>Instagram
+            <input id="settingInstagram" type="text" maxlength="40">
+          </label>
+          <label class="span-2">Dirección
+            <input id="settingAddress" type="text" maxlength="80">
+          </label>
+          <label>Seña predeterminada (%)
+            <input id="settingDeposit" type="number" min="0" max="100" inputmode="numeric">
+          </label>
+          <label>Validez predeterminada (días)
+            <input id="settingValidity" type="number" min="1" max="90" inputmode="numeric">
+          </label>
+          <label class="span-2">Garantía y condiciones
+            <textarea id="settingGuarantee" rows="6" maxlength="750"></textarea>
+          </label>
+        </div>
+        <div class="form-actions">
+          <button id="saveSettingsBtn" class="button button-primary" type="button">Guardar ajustes</button>
+          <button id="resetSettingsBtn" class="button button-secondary" type="button">Restaurar valores</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="messageDialog" class="dialog">
+    <form method="dialog">
+      <h2 id="dialogTitle">Aviso</h2>
+      <p id="dialogMessage"></p>
+      <div class="dialog-actions"><button class="button button-primary" value="ok">Aceptar</button></div>
+    </form>
+  </dialog>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
