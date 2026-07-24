@@ -154,16 +154,16 @@ input:disabled, textarea:disabled { background: #eceff1; color: #8d949a; }
   background: var(--paper);
   color: #111;
   box-shadow: var(--shadow);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .doc-header {
   height: 132px;
   display: grid;
-  grid-template-columns: 96px 1fr 300px;
+  grid-template-columns: 132px 1fr 270px;
   align-items: center;
-  gap: 20px;
-  padding: 17px 28px;
+  gap: 12px;
+  padding: 4px 18px;
   color: white;
   background: #101418;
   overflow: hidden;
@@ -181,29 +181,33 @@ input:disabled, textarea:disabled { background: #eceff1; color: #8d949a; }
 }
 .doc-logo {
   z-index: 1;
-  width: 86px;
-  height: 86px;
-  border-radius: 18px;
-  background: var(--red);
-  display: grid;
-  place-content: center;
-  font-size: 34px;
-  font-weight: 900;
-  line-height: .78;
-  letter-spacing: -3px;
+  width: 124px;
+  height: 124px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.doc-logo span { display: block; }
+.doc-logo img {
+  width: 124px;
+  height: 124px;
+  max-width: none;
+  flex: 0 0 auto;
+  object-fit: contain;
+  display: block;
+}
 .doc-brand { z-index: 1; display: flex; flex-direction: column; gap: 8px; }
-.doc-brand strong { font-size: 31px; letter-spacing: -.8px; }
-.doc-brand span { font-size: 13px; color: #e5e8eb; }
-.doc-contact { z-index: 1; display: flex; flex-direction: column; gap: 10px; font-size: 13px; justify-self: end; width: 260px; }
+.doc-brand strong { font-size: 31px; font-weight: 800; letter-spacing: -.8px; color: #ffffff; }
+.doc-brand span { font-size: 13px; font-weight: 600; color: #ffffff; white-space: nowrap; }
+.doc-contact { z-index: 1; display: flex; flex-direction: column; gap: 10px; font-size: 14px; font-weight: 800; color: #ffffff; justify-self: end; width: 260px; text-align: right; }
+.doc-contact b { font-weight: 800; }
 .doc-contact span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
-.doc-title-row { display: grid; grid-template-columns: 1fr 310px; gap: 30px; align-items: start; padding: 28px 38px 20px; }
+.doc-title-row { display: grid; grid-template-columns: 1fr 330px; gap: 24px; align-items: start; padding: 28px 38px 20px; }
 .doc-title-row h2 { margin: 0; font-size: 42px; letter-spacing: -.8px; line-height: 1; }
 .doc-meta { margin: 0; display: grid; gap: 7px; font-size: 13px; }
-.doc-meta div { display: grid; grid-template-columns: 145px 1fr; gap: 7px; }
-.doc-meta dt { margin: 0; color: var(--red); font-weight: 900; text-align: right; }
+.doc-meta div { display: grid; grid-template-columns: 160px 1fr; column-gap: 12px; align-items: baseline; }
+.doc-meta dt { margin: 0; color: var(--red); font-weight: 900; text-align: left; }
 .doc-meta dd { margin: 0; font-weight: 800; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 .doc-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 0 38px 18px; }
@@ -231,7 +235,7 @@ input:disabled, textarea:disabled { background: #eceff1; color: #8d949a; }
 .doc-lower { display: grid; grid-template-columns: 1fr 250px; gap: 25px; padding: 0 38px 13px; }
 .doc-guarantee p { margin: 0; font-size: 9px; line-height: 1.42; text-align: justify; }
 .deposit-note { margin-top: 10px; min-height: 58px; padding: 10px 12px; display: grid; grid-template-columns: 38px 1fr; align-items: center; gap: 10px; border: 1px solid #f2c7cc; border-radius: 8px; background: #fff1f3; }
-.deposit-icon { width: 34px; height: 34px; border-radius: 50%; display: grid; place-content: center; color: white; background: var(--red); font-size: 18px; font-weight: 900; }
+.deposit-icon { width: 34px; height: 34px; box-sizing: border-box; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; line-height: 1; text-align: center; color: white; background: var(--red); font-size: 18px; font-weight: 900; }
 .deposit-note p { font-size: 8.5px; line-height: 1.35; text-align: left; }
 .doc-signature { align-self: end; display: flex; flex-direction: column; align-items: center; text-align: center; padding-bottom: 6px; }
 .signature-line { width: 210px; border-top: 1px solid #222; margin-bottom: 9px; }
@@ -239,8 +243,8 @@ input:disabled, textarea:disabled { background: #eceff1; color: #8d949a; }
 .doc-signature span { margin-top: 4px; font-size: 11px; }
 .doc-signature small { margin-top: 13px; color: #9a9fa4; font-size: 8.5px; }
 
-.doc-footer { height: 76px; margin: 0 14px 0; padding: 14px 35px; display: flex; justify-content: space-between; align-items: center; color: white; background: #101418; position: absolute; left: 0; right: 0; bottom: 0; overflow: hidden; }
-.doc-footer::before { content: ""; position: absolute; left: -60px; top: -50px; width: 280px; height: 55px; border-radius: 50%; background: var(--red); }
+.doc-footer { z-index: 3; height: 76px; margin: 0 14px 0; padding: 14px 35px; display: flex; justify-content: space-between; align-items: center; color: white; background: #101418; position: absolute; left: 0; right: 0; bottom: 0; overflow: hidden; }
+.doc-footer::before { content: none; }
 .doc-footer > div { z-index: 1; display: flex; flex-direction: column; gap: 5px; font-size: 10px; }
 .doc-footer strong { font-size: 12px; }
 

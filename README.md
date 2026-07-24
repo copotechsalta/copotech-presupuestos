@@ -71,3 +71,12 @@ Los presupuestos se guardan en el almacenamiento local de cada dispositivo. No s
 - `app.js`: formulario, historial, PWA y generador PDF.
 - `manifest.webmanifest`: instalación de la app.
 - `sw.js`: funcionamiento sin conexión.
+
+
+## Corrección visual v6
+
+- Logo oficial extraído de la plantilla.
+- Contactos reforzados.
+- Metadatos alineados en dos columnas.
+- Símbolo de seña centrado.
+- Pie sin franja roja superpuesta.
